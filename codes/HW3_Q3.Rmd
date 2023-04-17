@@ -1,0 +1,110 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r}
+data(state)
+dt = data.frame(state.x77, row.names = state.abb)
+dt
+```
+
+```{r}
+g <- lm(dt$Life.Exp ~ ., dt)
+summary(g)
+```
+```{r}
+fullX = model.matrix(g)
+numvar = 7
+all01 = expand.grid(replicate(numvar, 0:1, simplify = FALSE))
+all01 = cbind(rep(1, nrow(all01)), all01)
+colnames(all01) = colnames(fullX)
+logEvid = rep(-1, nrow(all01))
+all01
+```
+```{r}
+for(mm in 1:nrow(all01))
+{
+    inds = all01[mm,]
+    Xmat = fullX[,(inds == 1)]
+    if(mm == 1) {Xmat = as.matrix(rep(1, nrow(dt)), nrow(dt), 1)}
+    p = ncol(Xmat)
+    n = nrow(Xmat)
+    md = lm(dt$Life.Exp ~ -1 + Xmat)
+    logEvid[mm] = (lgamma(p/2)) - ((p/2)*(log((sum(md$fitted.values^2))))) + (lgamma((n-p-1)/2)) - (((n-p)/2)*(log((sum(md$residuals^2))/2)))
+}
+logEvid.scaled = logEvid - max(logEvid) #scaling so I can take exponential
+Evid = exp(logEvid.scaled)
+Evid = Evid/(sum(Evid))
+Evid
+plot(Evid, xlab='Index of model', type = "h")
+```
+```{r}
+#High Evidence Models:
+high.evid.models = all01[which(Evid > 0.01),]
+cbind(high.evid.models, Evid[which(Evid > 0.01)])
+```
+```{r}
+Evid[which(Evid > 0.01)]
+```
+
+
+```{r}
+#Highest Evidence: 
+m1 = lm(dt$Life.Exp~1+dt$Murder)
+summary(m1)
+```
+```{r}
+plot(dt$Murder, dt$Life.Exp, main='Life.Exp against Murder')
+abline(a=72.97356 , b=-0.28395)
+```
+
+```{r}
+# compute AIC and BIC
+n = nrow(dt)
+AIC = rep(-1, nrow(all01))
+BIC = rep(-1, nrow(all01))
+for(mm in 1:nrow(all01))
+{
+    inds = all01[mm,]
+    Xmat = fullX[,(inds == 1)]
+    if(mm == 1) {Xmat = as.matrix(rep(1, nrow(dt)), nrow(dt), 1)}
+    p = ncol(Xmat)
+    n = nrow(Xmat)
+    md = lm(dt$Life.Exp ~ -1 + Xmat)
+    AIC[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + 2*(p+1)
+    BIC[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + (log(n))*(p+1)
+}
+summary(AIC)
+summary(BIC)
+```
+
+```{r}
+#Low AIC Models:
+low.AIC.models = all01[which(AIC < 118),]
+cbind(low.AIC.models, AIC[which(AIC < 118)])
+```
+```{r}
+AIC[which(AIC < 118)]
+```
+
+
+
+```{r}
+#Low BIC Models:
+low.BIC.models = all01[which(BIC < 130),]
+cbind(low.BIC.models, BIC[which(BIC < 130)])
+```
+
+
+
+
+
+
+
+
+
+
+

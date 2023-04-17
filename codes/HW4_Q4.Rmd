@@ -1,0 +1,162 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+data = read.csv("MRTSSM4453USN.csv")
+dt = data$MRTSSM4453USN
+plot(dt, type = "l", xlab = 'time', ylab = 'Sales')
+n <- length(dt)
+time <- 1:n
+```
+```{r}
+dt_train = dt[1:(n-48)]
+dt_test = dt[(n-48+1):n]
+```
+
+```{r}
+list_1 <- (rep(-999, 24))
+list_2 <- (rep(-999, 24))
+par(mfrow = c(4, 3))
+par(mar = c(1,1,1,1))
+for (p in (1:12)) {
+  # fit the model
+  n = length(dt_train)
+  yt = dt_train[(p+1):n]
+  Xmat = matrix(1, (n-p), 1)
+  for(j in 1:p)
+  {
+    Xmat = cbind(Xmat, dt_train[(p-j+1):(n-j)])
+  }
+  model = lm(yt ~ -1 + Xmat)
+  
+  # prediction
+  k = 48 #k predictions into the future
+  yhat = c(dt[1:n], rep(-9999, k))
+  for(i in 1:k)
+  {
+      ans = model$coefficients[1]
+      for(j in 1:p)
+      {
+        ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+      }
+      yhat[(n+i)] = ans
+  }
+  predvalues = yhat[-(1:n)]
+  
+  # plot(time, dt, main=sprintf('Prediction of AR(%s)', p), ylab='Sales', type= 'l')
+  plot(time, dt, type= 'l',xlab='',xaxt='n', ylab="",yaxt="n", main=sprintf('Prediction of AR(%s)', p))
+  time_predict <- 321:368
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=320, lty=2)
+  
+  # evaluate accuracy of prediction
+  # use l_2 lost to evaluate accuracy
+  list_1[p] <- sum((dt_test - predvalues)^2)
+  list_2[p] <- sum(abs(dt_test - predvalues))
+}
+par(mfrow = c(1, 1))
+```
+```{r}
+list_1 <- (rep(-999, 24))
+list_2 <- (rep(-999, 24))
+par(mfrow = c(4, 3))
+par(mar = c(1,1,1,1))
+for (p in (13:24)) {
+  # fit the model
+  n = length(dt_train)
+  yt = dt_train[(p+1):n]
+  Xmat = matrix(1, (n-p), 1)
+  for(j in 1:p)
+  {
+    Xmat = cbind(Xmat, dt_train[(p-j+1):(n-j)])
+  }
+  model = lm(yt ~ -1 + Xmat)
+  
+  # prediction
+  k = 48 #k predictions into the future
+  yhat = c(dt[1:n], rep(-9999, k))
+  for(i in 1:k)
+  {
+      ans = model$coefficients[1]
+      for(j in 1:p)
+      {
+        ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+      }
+      yhat[(n+i)] = ans
+  }
+  predvalues = yhat[-(1:n)]
+  
+  # plot(time, dt, main=sprintf('Prediction of AR(%s)', p), ylab='Sales', type= 'l')
+  plot(time, dt, type= 'l',xlab='',xaxt='n', ylab="",yaxt="n", main=sprintf('Prediction of AR(%s)', p))
+  time_predict <- 321:368
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=320, lty=2)
+  
+  # evaluate accuracy of prediction
+  # use l_2 lost to evaluate accuracy
+  list_1[p] <- sum((dt_test - predvalues)^2)
+  list_2[p] <- sum(abs(dt_test - predvalues))
+}
+par(mfrow = c(1, 1))
+```
+
+
+```{r}
+par(mfrow = c(4, 4))
+for(i in 1:10){plot(tme.train, mod$fitted.values + sig.est*rnorm(length(tme.train)), type = "l", xlab = "Time", ylab = "Data")}
+plot(tme.train, sunspots.train[,2], type = "l", xlab = "Time", ylab = "Data")
+for(i in 12:16){plot(tme.train, mod$fitted.values + sig.est*rnorm(length(tme.train)), type = "l", xlab = "Time", ylab = "Data")} 
+par(mfrow = c(1, 1))
+```
+
+```{r}
+plot((1:24), (list_1), xlab = 'p', ylab = 'l-2 lost', main = 'Accuracy of different models')
+```
+```{r}
+plot((1:24), log(list_2))
+```
+```{r}
+which.min(list_1)
+which.min(list_2)
+```
+```{r}
+for (p in (13:24)) {
+  # fit the model
+  n = length(dt_train)
+  yt = dt_train[(p+1):n]
+  Xmat = matrix(1, (n-p), 1)
+  for(j in 1:p)
+  {
+    Xmat = cbind(Xmat, dt_train[(p-j+1):(n-j)])
+  }
+  model = lm(yt ~ -1 + Xmat)
+  
+  # prediction
+  k = 48 #k predictions into the future
+  yhat = c(dt[1:n], rep(-9999, k))
+  for(i in 1:k)
+  {
+      ans = model$coefficients[1]
+      for(j in 1:p)
+      {
+        ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+      }
+      yhat[(n+i)] = ans
+  }
+  predvalues = yhat[-(1:n)]
+  
+  # plot(time, dt, main=sprintf('Prediction of AR(%s)', p), ylab='Sales', type= 'l')
+  plot(time, dt, type= 'l', main=sprintf('Prediction of AR(%s)', p))
+  time_predict <- 321:368
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=320, lty=2)
+  
+  # evaluate accuracy of prediction
+  # use l_2 lost to evaluate accuracy
+  list_1[p] <- sum((dt_test - predvalues)^2)
+  list_2[p] <- sum(abs(dt_test - predvalues))
+}
+```
+

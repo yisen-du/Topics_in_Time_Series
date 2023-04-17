@@ -1,0 +1,106 @@
+
+```{r}
+df = read.csv("facebook.csv")
+n <- length(df$Month) -1
+x <- 1:(n)
+y <- df$facebook[1:(n)]
+plot(x, y, type = 'l', ylab = "y", xlab = 'x', main = 'data overview')
+```
+```{r}
+X = matrix(1, n, n)
+X[,2] = x
+for(j in 3:n)
+{ 
+  X[,j] = pmax(x-(j-2),0)
+}
+```
+
+```{r}
+md = lm(y ~ -1 + X)
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'OLS fitted line')
+points(x, md$fitted.values, col = "red", type = "l")
+summary(md)
+```
+```{r}
+# try different values of tau
+C = 10^6
+tau = 0.0001
+kmax <- n - 2
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 1.5
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y,n,1)))
+muhat = X %*% pm
+
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'try different tau')
+# points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+```
+
+```{r}
+# try different values of tau
+C = 10^6
+tau = 1
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 1.5
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y,n,1)))
+muhat = X %*% pm
+
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'try different tau')
+# points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+```
+
+
+
+
+```{r}
+C = 10^6
+kmax <- n - 2
+library(mvtnorm)
+logmarg = function(tau, sig)
+{
+    T = diag(c(C, C, rep(tau^2, kmax)))
+    Sigmat = (X%*%T%*%(t(X))) + diag(rep(sig^2, n))
+    ans = dmvnorm(y, mean = rep(0, n), sigma = Sigmat, log = TRUE) 
+    return(ans)
+}
+```
+
+```{r}
+taugrid = seq(0.0001, 1, length.out = 50)
+siggrid = seq(1, 2, length.out = 50)
+g = expand.grid(tau=taugrid, sig=siggrid)
+for(i in 1:nrow(g)) {g$lm[i] = logmarg(g$tau[i], g$sig[i])}
+ind.max = which.max(g$lm)
+g[ind.max,]                                      
+
+tau = g$tau[ind.max]
+sig = g$sig[ind.max]
+c(tau, sig)
+```
+```{r}
+C = 10^6
+tau = 0.5306592
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 1.77551
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y,n,1)))
+muhat = X %*% pm
+
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'best model')
+# points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+```
+```{r}
+matrix(pm, 8, byrow = TRUE)
+```
+
+
+
+
+

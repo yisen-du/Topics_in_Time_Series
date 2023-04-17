@@ -1,0 +1,145 @@
+
+
+```{r}
+df <- read.csv("MRTSSM4453USN.csv")
+dt <- df$MRTSSM4453USN
+n <- length(dt)
+time <- 1:n
+plot(time, dt, type = "l", xlab = 'time (month)', ylab = 'Millions of dollars', main = 'Retail Sales: Beer, Wine, and Liquor Stores')
+```
+```{r}
+# fit AR(4)
+p = 16
+n = length(dt)
+yt = dt[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, dt[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+X <- Xmat
+sigma_hat <- sqrt((sum((model$residuals)^2))/(n-2*p-1))
+# solve(t(X) %*% X) * (sigma_hat^2)
+model$coefficients
+diag(solve(t(X) %*% X) * (sigma_hat^2))
+```
+```{r}
+# prediction
+k = 36 #k predictions into the future
+yhat = c(dt[1:n], rep(-9999, k))
+for(i in 1:k)
+{
+    ans = model$coefficients[1]
+    for(j in 1:p)
+    {
+       ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+```
+```{r}
+plot(time, dt, main='Prediction by AR(16) from (a)', ylab='percent', type= 'l')
+time_predict <- n:(n+k-1)
+points(time_predict, predvalues, type = "l", col = "red")
+abline(v=n, lty=2)
+```
+```{r}
+par(mfrow = c(4, 3))
+par(mar = c(1,1,1,1))
+for (p in (1:12)) {
+  # fit the model
+  model = arima(dt, order = c(0, 0, 1), method = "CSS")
+  predvalues = (predict(model, n.ahead = 36))$pred
+  
+  plot(time, dt, type= 'l',xlab='',xaxt='n', ylab="",yaxt="n", main=sprintf('Prediction of MA(%s)', p))
+  time_predict <- n:(n+36-1)
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=n, lty=2)
+}
+par(mfrow = c(1, 1))
+```
+```{r}
+par(mfrow = c(4, 3))
+par(mar = c(1,1,1,1))
+for (p in (13:24)) {
+  # fit the model
+  model = arima(dt, order = c(0, 0, 1), method = "CSS")
+  predvalues = (predict(model, n.ahead = 36))$pred
+  
+  plot(time, dt, type= 'l',xlab='',xaxt='n', ylab="",yaxt="n", main=sprintf('Prediction of AR(%s)', p))
+  time_predict <- n:(n+36-1)
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=n, lty=2)
+}
+par(mfrow = c(1, 1))
+```
+```{r}
+dt_diff <- diff(diff(dt, lag = 12))
+time_diff = 1:length(dt_diff)
+plot(time_diff, dt_diff, type = "l", xlab = 'time (month)', ylab = 'difference', main = 'Retail Sales: Beer, Wine, and Liquor Stores (difference)')
+
+acf(dt_diff, lag.max = 30, type = "correlation", plot = T, main = "Sample Autocorrelation")
+```
+```{r}
+mamod = arima(dt_diff, order = c(0, 0, 1), method = "CSS")
+mamod
+```
+```{r}
+# fit AR(3)
+p = 3
+n = length(dt_diff)
+yt = dt_diff[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, dt_diff[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+phi_0 <- model$coefficients[1]
+phi_1 <- model$coefficients[2]
+phi_2 <- model$coefficients[3]
+phi_3 <- model$coefficients[4]
+coef <- c(phi_0, phi_1+1, phi_2-phi_1, phi_3-phi_2, -phi_3,
+          1, (-1-phi_1), (phi_1-phi_2), (phi_2-phi_3), phi_3)
+coef <- c(phi_0, phi_1+1, phi_2-phi_1, phi_3-phi_2, -phi_3,
+          0,0,0,0,0,0,0,
+          1, (-1-phi_1), (phi_1-phi_2), (phi_2-phi_3), phi_3)
+```
+
+
+```{r}
+# prediction2
+k = 36 #k predictions into the future
+yhat = c(dt[1:n], rep(-9999, k))
+p <- 16
+for(i in 1:k)
+{
+    ans = coef[1]
+    for(j in 1:p)
+    {
+       ans = ans + (coef[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+
+plot(time, dt, main='Prediction by AR(16) from (f)', ylab='percent', type= 'l')
+time_predict <- n:(n+k-1)
+points(time_predict, predvalues, type = "l", col = "red")
+abline(v=n, lty=2)
+```
+

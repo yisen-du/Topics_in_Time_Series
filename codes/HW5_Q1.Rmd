@@ -1,0 +1,83 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+data = read.delim("norm.nao.monthly.b5001.current.ascii04Nov2022.txt", header = F, sep = "")
+n <- length(data$V3)
+time <- 1:n
+dt <- data$V3
+plot(dt, type = "l", xlab = 'time', ylab = 'Northern Oscillation Index', main = 'NAO index from 1950 to 2022')
+```
+```{r}
+# sample autocorrelation function 
+acf(dt, lag.max = 30, type = "correlation", plot = T, main = "Sample Autocorrelation")
+```
+
+```{r}
+# fit the MA(1) model
+Sfunc = function(alpha) #alpha consists of mu and the theta parameters (theta is indexed from 1; theta_0 is always 1)
+{
+    mu = alpha[1]
+    thet = alpha[-1]
+    n = length(dt)
+    q = length(thet)
+    zvals = c(rep(0, q), rep(9999, n))
+    for(t in 1:n)
+    {
+       zvals[q+t] = dt[t] - mu - sum(thet * zvals[(q+t-1):t])
+    }
+    ans = sum(zvals^2)
+    return(ans)
+}
+
+q = 1
+alphaest = optim(rep(0, (q+1)), Sfunc)$par 
+alphaest
+```
+```{r}
+#Standard Error Calculation
+#First compute Hessian
+library(numDeriv)
+H = hessian(Sfunc, alphaest)
+n = length(dt)
+sighat = sqrt(Sfunc(alphaest)/(n-length(alphaest)))
+#c(sighat, sighat^2)
+covmat = (sighat^2)*(solve(0.5*H))
+#covmat
+stderrs = sqrt(diag(covmat))
+cbind(alphaest, stderrs)
+sighat^2
+```
+```{r}
+# arima function in R
+mamod = arima(dt, order = c(0, 0, 1), method = "CSS")
+mamod
+```
+```{r}
+#Prediction with MA(1)
+L = 24 #number of future predictions desired
+muest = alphaest[1]
+thetaest = alphaest[2]
+q = 1
+n = length(dt)
+zvals = c(rep(0, q), rep(9999, n))
+for(t in 1:n)
+{
+   zvals[q+t] = dt[t] - muest - sum(thetaest * zvals[(q+t-1):t])
+}
+predest = muest + (thetaest*(zvals[(q+n)]))
+predvec = c(predest, rep(muest, L - 1))
+predse = c(sighat, rep(sighat*(sqrt(1+(thetaest^2))), L-1))
+cbind(predvec, predse)
+
+#Plot predictions:
+plot(time, dt, xlab = 'time', ylab = 'Northern Oscillation Index', main = 'NAO index from 1950 to 2022 + Prediction of MA(1)', type = 'l')
+points((n+1) : (n+L), predvec, type = "l", col = "blue")
+```
+```{r}
+predvec
+```
+

@@ -1,0 +1,110 @@
+
+```{r}
+df <- read.csv("IRLTLT01USM156N.csv")
+dt <- df$IRLTLT01USM156N
+n <- length(dt)
+time <- 1:n
+plot(time, dt, type = "l", xlab = 'time (month)', ylab = 'percent', main = 'Long-Term Government Bond Yields: 10-year (US)')
+```
+```{r}
+# fit AR(4)
+p = 4
+n = length(dt)
+yt = dt[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, dt[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+X <- Xmat
+sigma_hat <- sqrt((sum((model$residuals)^2))/(n-2*p-1))
+# solve(t(X) %*% X) * (sigma_hat^2)
+c(model$coefficients, diag(solve(t(X) %*% X) * (sigma_hat^2)))
+```
+```{r}
+# prediction
+k = 100 #k predictions into the future
+yhat = c(dt[1:n], rep(-9999, k))
+for(i in 1:k)
+{
+    ans = model$coefficients[1]
+    for(j in 1:p)
+    {
+       ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+```
+```{r}
+plot(time, dt, main='Prediction by AR(4) from (a)', ylab='percent', type= 'l')
+time_predict <- n:(n+k-1)
+points(time_predict, predvalues, type = "l", col = "red")
+abline(v=n, lty=2)
+```
+```{r}
+dt_diff = diff(dt)
+time_diff = 1:(n-1)
+plot(time_diff, dt_diff, type = "l", xlab = 'time (month)', ylab = 'difference', main = 'Long-Term Government Bond Yields: 10-year (US)')
+
+acf(dt_diff, lag.max = 30, type = "correlation", plot = T, main = "Sample Autocorrelation")
+```
+```{r}
+# arima function in R
+mamod = arima(dt_diff, order = c(0, 0, 1), method = "CSS")
+mamod
+```
+```{r}
+# fit AR(3)
+p = 3
+n = length(dt_diff)
+yt = dt_diff[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, dt_diff[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+phi_0 <- model$coefficients[1]
+phi_1 <- model$coefficients[2]
+phi_2 <- model$coefficients[3]
+phi_3 <- model$coefficients[4]
+coef <- c(phi_0, phi_1+1, phi_2-phi_1, phi_3-phi_2, -phi_3)
+coef
+```
+
+```{r}
+# prediction2
+k = 100 #k predictions into the future
+yhat = c(dt[1:n], rep(-9999, k))
+p <- 4
+for(i in 1:k)
+{
+    ans = coef[1]
+    for(j in 1:p)
+    {
+       ans = ans + (coef[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+
+plot(time, dt, main='Prediction by AR(4) from (e)', ylab='percent', type= 'l')
+time_predict <- n:(n+k-1)
+points(time_predict, predvalues, type = "l", col = "red")
+abline(v=n, lty=2)
+```
+

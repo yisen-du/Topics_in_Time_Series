@@ -1,0 +1,62 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+raw_data = read.csv('yahoo.csv')
+yahoo.ts = ts(raw_data$yahoo, start = c(2004, 1), end = c(2022, 8), frequency = 12)
+plot(yahoo.ts, ylab = "Pupularity Index", xlab = "Time (in months)", main = "Yahoo Google Trend")
+```
+
+```{r}
+n = length(yahoo.ts)
+tme = 1:n
+scaledtme = (1:n)/n
+Xfull = matrix(1, n, 1)
+D = 8
+for(i in 1:D)
+{
+   Xfull = cbind(Xfull, scaledtme^i)
+}
+```
+
+```{r}
+dt = yahoo.ts
+logEvid = rep(-1, 8)
+AIC = rep(-1, 8)
+BIC = rep(-1, 8)
+for(mm in 1:8)
+{
+    Xmat = Xfull[, 1:(mm+1)]
+    p = ncol(Xmat)
+    n = nrow(Xmat)
+    md = lm(dt ~ -1 + Xmat)
+    logEvid[mm] = (lgamma(p/2)) - ((p/2)*(log((sum(md$fitted.values^2))))) + (lgamma((n-p-1)/2)) - (((n-p)/2)*(log((sum(md$residuals^2))/2)))
+    AIC[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + 2*(p+1)
+    BIC[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + (log(n))*(p+1)
+}
+logEvid.scaled = logEvid - max(logEvid) #scaling so I can take exponential
+Evid = exp(logEvid.scaled)
+Evid = Evid/(sum(Evid))
+plot(Evid, type = "h")
+Evid
+```
+
+```{r}
+t = 1:length(yahoo.ts)
+plot(t, yahoo.ts, ylab = "Pupularity Index", xlab = "Time (in months)", main = "Yahoo Google Trend and polynomial fitted line", type='l')
+points(t, md$fitted.values, type = "l", col = "red")
+```
+
+
+```{r}
+which.min(AIC)
+```
+
+
+
+```{r}
+which.min(BIC)
+```
+

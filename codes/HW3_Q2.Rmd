@@ -1,0 +1,72 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+raw_data = read.csv('HW3Data153Fall2022.csv')
+x = raw_data$x
+y = raw_data$y
+n = length(x)
+plot(x, y, ylab='y', xlab='x',main='Data overview')
+```
+```{r}
+pdf_model_1 = function(b0, b1, sigma) {
+  log_ans = -n*log(pi) + n*log(sigma) - sum(log((y - (b0 + b1*x))^2 + sigma^2))+1000
+  # return (exp(log_ans))
+  return (log_ans)
+}
+
+pdf_model_2 = function(b0, b1, sigma) {
+  log_ans = -sum((abs(y - (b0 + b1*x)))/sigma) - n*(log(2*sigma))+1000
+  # return (exp(log_ans))
+  return (log_ans)
+}
+
+pdf_model_3 = function(b0, sigma) {
+  log_ans = -n*log(pi) + n*log(sigma) - sum(log((y - b0)^2 + sigma^2))+1000
+  # return (exp(log_ans))
+  return (log_ans)
+}
+
+pdf_model_4 = function(b0, sigma) {
+  log_ans = -sum((abs(y - b0))/sigma) - n*(log(2*sigma))+1000
+  # return (exp(log_ans))
+  return (log_ans)
+}
+```
+
+```{r}
+b0_grid = seq(-10, 10, 1)
+b1_grid = seq(-10, 10, 1)
+logsig_grid = seq(-10, 10, 1)
+g = expand.grid(x = b0_grid, y = b1_grid, z = logsig_grid)
+g
+```
+
+```{r}
+for(i in 1:nrow(g))
+{
+    print(i)
+    g$model1_dens[i] = pdf_model_1(g$x[i], g$y[i], exp(g$z[i]))
+    g$model2_dens[i] = pdf_model_2(g$x[i], g$y[i], exp(g$z[i]))
+    g$model3_dens[i] = pdf_model_3(g$x[i], exp(g$z[i]))
+    g$model4_dens[i] = pdf_model_4(g$x[i], exp(g$z[i]))
+}
+```
+
+```{r}
+evident_model1 = mean(exp(g$model1_dens))
+evident_model2 = mean(exp(g$model2_dens))
+evident_model3 = mean(exp(g$model3_dens))
+evident_model4 = mean(exp(g$model4_dens))
+
+c(evident_model1, evident_model2, evident_model3, evident_model4)
+c(evident_model1/(evident_model1+evident_model2+evident_model3+evident_model4),   
+  evident_model2/(evident_model1+evident_model2+evident_model3+evident_model4),
+  evident_model3/(evident_model1+evident_model2+evident_model3+evident_model4),
+  evident_model4/(evident_model1+evident_model2+evident_model3+evident_model4)
+  )
+```
+
+

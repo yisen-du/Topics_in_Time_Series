@@ -1,0 +1,102 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+data("AirPassengers")
+dt <- AirPassengers
+t = 1: length(dt)
+plot(t, dt, ylab = "Passengers", xlab = "Time (in months)", main = "Air Passengers", type = 'l')
+```
+
+```{r}
+all01 = expand.grid(replicate(18, 0:1, simplify = FALSE))
+num_model = nrow(all01)
+
+n = length(dt)
+tme = 1:n
+scaledtme = (1:n)/n
+Xfull = matrix(1, n, 1)
+Xfull = cbind(Xfull, scaledtme^1)
+S = seq(1/n, 18/n, 1/n)
+for(i in 1:18)
+{
+  f = S[i]
+  Xfull = cbind(Xfull, cos(2*pi*f*scaledtme), sin(2*pi*f*scaledtme))
+}
+dim(Xfull)
+num_model
+```
+```{r}
+# model 1
+logEvid = rep(-1, num_model)
+AIC = rep(-1, num_model)
+BIC = rep(-1, num_model)
+n = length(dt)
+tme = 1:n
+for(mm in 1:num_model)
+{
+    X1 = Xfull[,1:2]
+    inds = all01[mm,]
+    index = which(inds == 1)*2 -1
+    col_we_want = sort(c(index, index + 1))
+    X2 = Xfull[, 3:38][, col_we_want]
+    Xmat = cbind(X1, X2)
+    p = ncol(Xmat)
+    md = lm(dt ~ -1 + Xmat)
+    logEvid[mm] = (lgamma(p/2)) - ((p/2)*(log((sum(md$fitted.values^2))))) + (lgamma((n-p-1)/2)) - (((n-p)/2)*(log((sum(md$residuals^2))/2)))
+    AIC[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + 2*(p+1)
+    BIC[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + (log(n))*(p+1)
+}
+logEvid.scaled = logEvid - max(logEvid) #scaling so I can take exponential
+Evid = exp(logEvid.scaled)
+Evid = Evid/(sum(Evid))
+plot(Evid, type = "h")
+```
+```{r}
+# model 2
+logEvid2 = rep(-1, num_model)
+AIC2 = rep(-1, num_model)
+BIC2 = rep(-1, num_model)
+n = length(dt)
+log_data = log(dt)
+tme = 1:n
+for(mm in 1:num_model)
+{
+    X1 = Xfull[,1:2]
+    inds = all01[mm,]
+    index = which(inds == 1)*2 - 1
+    col_we_want = sort(c(index, index + 1))
+    X2 = Xfull[, 3:38][, col_we_want]
+    Xmat = cbind(X1, X2)
+    p = ncol(Xmat)
+    md = lm(log_data ~ -1 + Xmat)
+    logEvid2[mm] = (lgamma(p/2)) - ((p/2)*(log((sum(md$fitted.values^2))))) + (lgamma((n-p-1)/2)) - (((n-p)/2)*(log((sum(md$residuals^2))/2)))
+    AIC2[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + 2*(p+1)
+    BIC2[mm] = n + n*log((2*pi/n)*sum(md$residuals^2)) + (log(n))*(p+1)
+}
+logEvid.scaled = logEvid2 - max(logEvid2) #scaling so I can take exponential
+Evid2 = exp(logEvid.scaled)
+Evid2 = Evid2/(sum(Evid2))
+plot(Evid2, type = "h")
+```
+```{r}
+Evid_all = c(logEvid, logEvid2)
+logEvid_all = Evid_all
+logEvid.scaled = logEvid_all - max(logEvid_all) #scaling so I can take exponential
+Evid = exp(logEvid.scaled)
+Evid = Evid/(sum(Evid))
+plot(Evid, type = "h")
+```
+
+```{r}
+order(Evid, decreasing = TRUE)
+# which(Evid > 0.0001)
+```
+
+```{r}
+all01[262145-262144,]
+all01[262146-262144,]
+all01[262147-262144,]
+```
+

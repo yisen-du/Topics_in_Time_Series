@@ -1,0 +1,108 @@
+
+
+```{r}
+df = read.csv("Prob1HW7DataStat153.csv")
+x <- df$x
+y <- df$y
+n <- length(x)
+plot(x, y, type = "l", ylab = "y", xlab = 'x', main = 'data overview')
+```
+
+```{r}
+X = matrix(1, n, 101)
+X[,2] = x
+for(j in 3:101)
+{ 
+  X[,j] = pmax(x-(j-2)/100,0)
+}
+```
+
+```{r}
+md = lm(y ~ -1 + X)
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'OLS fitted line')
+points(x, md$fitted.values, col = "red", type = "l")
+summary(md)
+```
+
+```{r}
+C = 10^6
+kmax <- 99
+library(mvtnorm)
+logmarg = function(tau, sig)
+{
+    T = diag(c(C, C, rep(tau^2, kmax)))
+    Sigmat = (X%*%T%*%(t(X))) + diag(rep(sig^2, n))
+    ans = dmvnorm(y, mean = rep(0, n), sigma = Sigmat, log = TRUE) 
+    return(ans)
+}
+```
+
+```{r}
+# try different values of tau
+C = 10^6
+tau = 0.01
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 1
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y,n,1)))
+muhat = X %*% pm
+
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'try different tau')
+# points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+```
+```{r}
+# try different values of tau
+C = 10^6
+tau = 50
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 1
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y,n,1)))
+muhat = X %*% pm
+
+plot(x, y, xlab = "x", ylab = "y", type = 'l', main = 'try different tau')
+points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+```
+
+
+```{r}
+#grid based minimization of logmarg
+taugrid = seq(0.01, 50, length.out = 50)
+siggrid = seq(0.5, 1.5, length.out = 50)
+g = expand.grid(tau=taugrid, sig=siggrid)
+for(i in 1:nrow(g)) {g$lm[i] = logmarg(g$tau[i], g$sig[i])}
+ind.max = which.max(g$lm)
+g[ind.max,]                                      
+
+tau = g$tau[ind.max]
+sig = g$sig[ind.max]
+c(tau, sig)
+```
+
+```{r}
+T = diag(c(C, C, rep(tau^2, kmax)))
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y,n,1)))
+muhat = X %*% pm
+plot(x, y, xlab = "x", ylab = "y", col = "gray", main = 'blue: regularized, red: OLS')
+points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+```
+```{r}
+y_true <- function(x)
+{
+    ans = sin(15 * x) + exp(-x^2/2) + 1/2 * (x - 0.5)^2
+    return(ans)
+}
+y_values <- y_true(x)
+
+plot(x, y, xlab = "x", ylab = "y", col = "gray", main = 'blue: regularized, red: OLS, black: true function')
+points(x, md$fitted.values, col = "red", type = "l")
+points(x, muhat, col = "blue", type = "l")
+points(x, y_values, col = "black", type = "l")
+```

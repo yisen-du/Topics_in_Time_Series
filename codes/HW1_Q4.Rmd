@@ -1,0 +1,77 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+raw_data = read.csv('yahoo.csv')
+yahoo.ts = ts(raw_data$yahoo, start = c(2004, 1), end = c(2022, 8), frequency = 12)
+plot(yahoo.ts, ylab = "Pupularity Index", xlab = "Time (in months)", main = "Yahoo Google Trend")
+```
+
+```{r}
+t = 1: length(yahoo.ts)
+plot(t, yahoo.ts, type = "l", xlab = "Time", ylab = "Pupularity Index", main = "Yahoo Google Trend")
+
+color <- c('red', 'orange', 'yellow', 'green', 'blue')
+
+lin.model = lm(yahoo.ts ~ 1 + t)
+points(t, lin.model$fitted, type = "l", col = color[1])
+
+lin.model = lm(yahoo.ts ~ 1 + t + I(t^2))
+points(t, lin.model$fitted, type = "l", col = color[2])
+
+lin.model = lm(yahoo.ts ~ 1 + t + I(t^2) + I(t^3))
+points(t, lin.model$fitted, type = "l", col = color[3])
+
+lin.model = lm(yahoo.ts ~ 1 + t + I(t^2) + I(t^3) + I(t^4))
+points(t, lin.model$fitted, type = "l", col = color[4])
+
+lin.model = lm(yahoo.ts ~ 1 + t + I(t^2)+ I(t^3) + I(t^4) + I(t^5))
+points(t, lin.model$fitted, type = "l", col = color[5])
+```
+
+```{r}
+t = 1: length(yahoo.ts)
+plot(t, yahoo.ts, type = "l", xlab = "Time", ylab = "Pupularity Index", main = "Yahoo Google Trend")
+lin.model = lm(yahoo.ts ~ 1 + t + I(t^2)+ I(t^3))
+points(t, lin.model$fitted, type = "l", col = 'red')
+
+sighat = sqrt((sum((lin.model$residuals)^2))/(n-3)) 
+bhat = lin.model$coefficients
+n = length(yahoo.ts)
+X = model.matrix(lin.model)
+Sigma.mat = (sighat^2)*solve(t(X) %*% X)
+
+N = 30
+library(mvtnorm)
+post.samples = (rbind(bhat)[rep(1, N), ]) + (rmvnorm(N, sigma = Sigma.mat))/(sqrt((rchisq(N, df = n-3))/(n-3)))
+
+x <- t
+for(k in 1:N) {
+  y <- post.samples[k,][1] + post.samples[k,][2]*x + post.samples[k,][3]*(x^2) + post.samples[k,][4]*(x^3)  
+  lines(t,y, col = 'blue')
+}
+points(t, lin.model$fitted, type = "l", col = 'red')
+```
+```{r}
+lin.model = lm(yahoo.ts ~ 1 + t + I(t^2)+ I(t^3))
+residual <- lin.model$residuals
+plot(t, residual)
+
+acf(residual, lag.max = 50, type = "correlation", plot = T, main = "Correlogram for the data")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

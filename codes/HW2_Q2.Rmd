@@ -1,0 +1,130 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+data("lynx")
+ts <- lynx
+n = length(trapped)
+plot(ts, ylab = "Annual numbers of lynx trappings")
+```
+
+```{r}
+plot(1:(n%/%2)/n, abs(fft(ts)[2:(n%/%2+1)])^2/n, type = "h", ylab = "Periodogram",xlab = "Frequence")
+abline(h = 0)
+```
+```{r}
+n = length(trapped)
+tme = 1821:1934
+grid.res = 0.0001
+f.val = seq(0.01, 0.49, grid.res)
+X = matrix(1, nrow = n, ncol = 3)
+expos = rep(-1, length(f.val)) 
+log.values = rep(-1, length(f.val))
+log.det.term = rep(-1, length(f.val))
+
+for(i in 1:length(f.val))
+{
+    X[,2] = cos(2*pi*f.val[i]*tme)
+    X[,3] = sin(2*pi*f.val[i]*tme)
+    mod = lm(trapped ~ X)
+    log.value = ((ncol(X) - n)/2)*(log(sum(mod$residuals^2))) - (0.5*(log(det(t(X) %*% X))))
+    log.det.term[i] = (0.5*(log(det(t(X) %*% X))))
+    log.values[i] = log.value
+}
+log.values = log.values - max(log.values) #scaling to remove large values 
+expos = exp(log.values)
+expos = (expos/sum(expos))/grid.res
+expos = expos / 10000
+plot(f.val, expos, type = "l")
+```
+
+```{r}
+# Point estimate and uncertainty interval of f
+ind.max = which.max(expos)
+est.f = f.val[ind.max] # point estimate of f
+# sum(expos[1:931])
+# sum(expos[1:947])
+ind.left = 931
+ind.right = 947
+f.left = f.val[ind.left]
+f.right = f.val[ind.right]
+sprintf("the point estimate of f: %f", est.f)
+sprintf("the uncertainty interval of f: (%f,%f)", f.left, f.right)
+sprintf("the corresponding period of oscillation: %f", 1/est.f)
+```
+```{r}
+# Point estimate and uncertainty interval of beta and sigma
+# Plotting posterior samples of the fitted function
+library(mvtnorm)
+
+N = 2000 #number of posterior samples
+post.samples = matrix(-1, N, 5)
+post.samples[,1] = sample(f.val, N, replace = T, prob = expos)
+# post.samples[,1] = 0.1038
+for(i in 1:N)
+{
+    fr = post.samples[i,1]
+    X = matrix(1, nrow = n, ncol = 3)
+    X[,2] = cos(2*pi*fr*tme)
+    X[,3] = sin(2*pi*fr*tme)
+    lin.model = lm(trapped ~ -1 + X) # means omitting intercepts
+    bhat = lin.model$coefficients
+    sighat = sqrt((sum((lin.model$residuals)^2))/(n-3))
+    Sigma.mat = (sighat^2)*solve(t(X) %*% X)
+    chiran = (rchisq(1, df = n-3))
+    beta.samples = bhat + (rmvnorm(1, sigma = Sigma.mat))/(sqrt(chiran/(n-3)))
+    sig.sample = sqrt((sum((lin.model$residuals)^2))/chiran)
+    post.samples[i,2:4] = beta.samples
+    post.samples[i, 5] = sig.sample
+    # print(bhat)
+}
+hist(post.samples[,1], breaks = 100)
+hist(post.samples[,2], breaks = 100)
+hist(post.samples[,3], breaks = 100)
+hist(post.samples[,4], breaks = 100)
+hist(post.samples[,5], breaks = 100)
+
+beta_0 = mean(post.samples[,2])
+beta_0_interval = quantile(post.samples[,2], probs = c(0.025, 0.975) )
+sprintf("the point estimate of beta_0: %f", beta_0)
+print(beta_0_interval)
+
+beta_1 = mean(post.samples[,3])
+beta_1_interval = quantile(post.samples[,3], probs = c(0.025, 0.975) )
+sprintf("the point estimate of beta_1: %f", beta_0)
+print(beta_1_interval)
+
+beta_2 = mean(post.samples[,4])
+beta_2_interval = quantile(post.samples[,4], probs = c(0.025, 0.975) )
+sprintf("the point estimate of beta_2: %f", beta_0)
+print(beta_2_interval)
+
+sigma_estimate = mean(post.samples[,5])
+sigma_interval = quantile(post.samples[,5], probs = c(0.025, 0.975) )
+sprintf("the point estimate of sigma: %f", sigma_estimate)
+print(sigma_interval)
+```
+
+```{r}
+#Plotting some posterior samples
+plot(tme, trapped, type = "l")
+for(i in 1:50)
+{
+    fr = post.samples[i,1]
+    b0 = post.samples[i,2]
+    b1 = post.samples[i, 3]
+    b2 = post.samples[i, 4]
+    points(tme, b0 + b1*cos(2*pi*fr*tme) + b2*sin(2*pi*fr*tme), type = "l", col = "red")  
+}
+```
+```{r}
+
+```
+
+
+
+
+
+
+

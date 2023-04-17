@@ -1,0 +1,84 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+dt = c(-0.69, -4.26, 0.14, -0.86, 0.42, 24.21, 0.51, -1.23, 2.30, 4.15)
+n = length(dt)
+plot(dt, ylab='noisy value', main='Data overview')
+abline(h=0)
+```
+
+```{r}
+pdf_norm = function(sigma) {
+  # log_ans = -(n/2)*log(2*pi) - n*log(sigma) - (1/2*sigma^2)*sum(dt^2)
+  return (((2*pi)^(-n/2))*(sigma^(-n))*exp(-sum(dt^2)/sigma))
+}
+
+pdf_lap = function(sigma) {
+  log_ans = -sum((abs(dt))/sigma) - n*(log(2*sigma))
+  return (exp(log_ans))
+}
+
+pdf_cauchy = function(sigma) {
+  log_ans = -n*log(pi) + log(sigma) - sum(log(dt^2 + sigma^2))
+  return (exp(log_ans))
+}
+```
+
+```{r}
+logsig.gr = seq(-15, 15, 0.5)
+g = expand.grid(x = logsig.gr)
+for(i in 1:nrow(g))
+{
+    g$normdens[i] = pdf_norm(exp(g$x[i]))
+    g$lapdens[i] = pdf_lap(exp(g$x[i]))
+    g$cauchydens[i] = pdf_cauchy(exp(g$x[i]))
+}
+
+evident_norm = mean(g$normdens)
+evident_lap = mean(g$lapdens)
+evident_cauchy = mean(g$cauchydens)
+
+# sprintf("the estimated evident of model1: %f", evident_norm)
+# sprintf("the estimated evident of model2: %f", evident_lap)
+# sprintf("the estimated evident of model3: %f", evident_cauchy)
+
+c(evident_norm, evident_lap, evident_cauchy)
+c(evident_norm/(evident_norm+evident_lap+evident_cauchy), evident_lap/(evident_norm+evident_lap+evident_cauchy), evident_cauchy/(evident_norm+evident_lap+evident_cauchy))
+```
+```{r} 
+#normalized to sum to one
+g[which.max(g$normdens),]
+g[which.max(g$lapdens),]
+g[which.max(g$cauchydens),]
+```
+```{r}
+library(LaplacesDemon)
+x <- dlaplace(1,0,1)
+x <- plaplace(1,0,1)
+x <- qlaplace(0.5,0,1)
+x <- rlaplace(100,0,1)
+
+#Plot Probability Functions
+x <- seq(from=-5, to=5, by=0.1)
+plot(x, dlaplace(x,0,0.5), ylim=c(0,1), type="l", main="Probability Functions of Norm(blue), Laplace(red) and Cauchy(green)", ylab="density", col="red")
+
+lines(x, dcauchy(x,0,0.5), col='green')
+
+lines(x, dnorm(x,0,0.5), col="blue")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

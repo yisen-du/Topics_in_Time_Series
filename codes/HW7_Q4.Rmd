@@ -1,0 +1,283 @@
+
+
+```{r}
+library(Sleuth3)
+dt = ex1029
+names(dt)
+n_train = 500
+n_test <- 100
+
+dt_train <- dt[sample(nrow(dt), n_train),]
+dt_test <- dt[sample(nrow(dt), n_test),]
+
+y_train = log(dt_train$WeeklyEarnings)
+x_train = dt_train$Exper
+x_train_2 <- dt_train$Educ
+
+y_test <- log(dt_test$WeeklyEarnings)
+x_test <- dt_test$Exper
+x_test_2 <- dt_test$Educ
+
+plot(x_train, y_train, xlab = "Experience in years", ylab = "log(Earnings)", main = 'train set')
+
+plot(x_train_2, y_train, xlab = "Education in years", ylab = "log(Earnings)", main = 'train set')
+```
+
+```{r}
+kmax = 63
+X = matrix(1, n_train, (kmax+2))
+X[,2] = x_train
+for(j in 1:kmax)
+{
+  X[,(j+2)] = pmax(x_train-j,0)
+}
+
+md = lm(y_train ~ -1 + X)
+
+X_test <- matrix(1, n_test, (kmax+2))
+X_test[,2] = x_test
+for(j in 1:kmax)
+{
+  X_test[,(j+2)] = pmax(x_test-j,0)
+}
+
+beta <- data.frame(md$coefficients)
+beta <- beta$md.coefficients
+beta[is.na(beta)] <- 0
+beta <- c(beta)
+beta <-  matrix(beta, nrow = 65, byrow = TRUE)
+X_test <- c(X_test)
+X_test <- matrix(X_test, nrow = 100, byrow = TRUE)
+y_pred <- X_test %*% beta
+
+error <- sum((y_pred - y_test)^2) / n_test
+error
+```
+```{r}
+md$coefficientsa
+```
+
+
+```{r}
+#Marginal or integrated density calculation:
+C = 10^6
+library(mvtnorm)
+logmarg = function(tau, sig)
+{
+    T = diag(c(C, C, rep(tau^2, kmax)))
+    Sigmat = (X%*%T%*%(t(X))) + diag(rep(sig^2, n))
+    ans = dmvnorm(y_train, mean = rep(0, n), sigma = Sigmat, log = TRUE) 
+    return(ans)
+}
+```
+
+```{r}
+n = length(y_train)
+kmax = 63
+X = matrix(1, n, (kmax+2))
+X[,2] = x_train
+for(j in 1:kmax)
+{
+  X[,(j+2)] = pmax(x_train-j,0)
+}
+
+md = lm(y_train ~ -1 + X)
+
+taugrid = seq(0.001, 0.1, length.out = 20)
+siggrid = seq(0.1, 1, length.out = 20)
+
+g = expand.grid(tau=taugrid, sig=siggrid)
+for(i in 1:nrow(g)) {g$lm[i] = logmarg(g$tau[i], g$sig[i])}
+ind.max = which.max(g$lm)
+tau = g$tau[ind.max]
+sig = g$sig[ind.max]
+
+T = diag(c(C, C, rep(tau^2, kmax)))
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y_train,n,1)))
+
+y_pred = X_test %*% pm
+error <- sum((y_pred - y_test)^2) / n_test
+error
+```
+```{r}
+matrix(pm, 7, byrow = TRUE)
+```
+
+
+```{r}
+# (c)
+n = length(y_train)
+kmax = 17
+X = matrix(1, n, (kmax+2))
+X[,2] = x_train_2
+for(j in 1:kmax)
+{
+  X[,(j+2)] = pmax(x_train_2-j,0)
+}
+
+md = lm(y_train ~ -1 + X)
+summary(md)
+```
+```{r}
+C = 10^6
+tau = 0.001
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 0.6
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y_train,n,1)))
+muhat = X %*% pm
+
+plot(x_train_2, y_train, xlab = "Education in years", ylab = "log(Earnings)", main = 'train set')
+points(x_train_2[order(x_train_2)], muhat[order(x_train_2)], col = "blue", type = "l")
+```
+```{r}
+C = 10^6
+tau = 5
+T = diag(c(C, C, rep(tau^2, kmax)))
+sig = 0.6
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y_train,n,1)))
+muhat = X %*% pm
+
+plot(x_train_2, y_train, xlab = "Education in years", ylab = "log(Earnings)", main = 'train set')
+points(x_train_2[order(x_train_2)], muhat[order(x_train_2)], col = "blue", type = "l")
+```
+
+
+```{r}
+C = 10^6
+library(mvtnorm)
+logmarg = function(tau, sig)
+{
+    T = diag(c(C, C, rep(tau^2, kmax)))
+    Sigmat = (X%*%T%*%(t(X))) + diag(rep(sig^2, n))
+    ans = dmvnorm(y_train, mean = rep(0, n), sigma = Sigmat, log = TRUE) 
+    return(ans)
+}
+
+taugrid = seq(0.001, 5, length.out = 20)
+siggrid = seq(0.3, 0.8, length.out = 20)
+
+g = expand.grid(tau=taugrid, sig=siggrid)
+n <- 500
+for(i in 1:nrow(g)) {g$lm[i] = logmarg(g$tau[i], g$sig[i])}
+ind.max = which.max(g$lm)
+tau = g$tau[ind.max]
+sig = g$sig[ind.max]
+
+T = diag(c(C, C, rep(tau^2, kmax)))
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y_train,n,1)))
+
+n = length(y_test)
+kmax = 17
+X_test = matrix(1, n, (kmax+2))
+X_test[,2] = x_test_2
+for(j in 1:kmax)
+{
+  X_test[,(j+2)] = pmax(x_test_2-j,0)
+}
+
+y_pred = X_test %*% pm
+error <- sum((y_pred - y_test)^2) / n_test
+error
+
+```
+```{r}
+matrix(pm, 5, byrow = TRUE)
+```
+
+
+
+```{r}
+# (d)
+n = length(y_train)
+kmax = 66 + 17
+X = matrix(1, n, kmax)
+X[,2] = x_train
+
+for(j in 3:65)
+{
+  X[,j] = pmax(x_train-(j-2),0)
+}
+
+X[,66] = x_train_2
+for(j in 67:kmax)
+{
+  X[,j] = pmax(x_train_2-(j-66),0)
+}
+
+md = lm(y_train ~ -1 + X)
+summary(md)
+dim(X)
+```
+
+```{r}
+C = 10^6
+library(mvtnorm)
+logmarg = function(tau_1, tau_2, sig)
+{
+    T = diag(c(C, C, rep(tau_1^2, 63), C, rep(tau_2^2, 17)))
+    Sigmat = (X%*%T%*%(t(X))) + diag(rep(sig^2, n))
+    ans = dmvnorm(y_train, mean = rep(0, n), sigma = Sigmat, log = TRUE) 
+    return(ans)
+}
+
+taugrid_1 = seq(0.001, 5, length.out = 20)
+taugrid_2 = seq(0.001, 5, length.out = 20)
+siggrid = seq(0.3, 0.8, length.out = 20)
+
+g = expand.grid(tau_1=taugrid_1, tau_2=taugrid_2, sig=siggrid)
+n <- 500
+for(i in 1:nrow(g)) {g$lm[i] = logmarg(g$tau_1[i], g$tau_2[i], g$sig[i])}
+ind.max = which.max(g$lm)
+
+tau_1 = g$tau_1[ind.max]
+tau_2 = g$tau_2[ind.max]
+sig = g$sig[ind.max]
+
+T = diag(c(C, C, rep(tau_1^2, 63), C, rep(tau_2^2, 17)))
+TempMat = solve((sig^2)*(solve(T)) + (t(X) %*% X))
+pSigmat = (sig^2)*TempMat
+pm = TempMat%*%(t(X)%*%(matrix(y_train,n,1)))
+```
+
+```{r}
+matrix(pm, 6, byrow = TRUE)
+```
+
+
+
+```{r}
+n = length(y_test)
+kmax = 66 + 17
+X_test = matrix(1, n, kmax)
+X_test[,2] = x_test
+
+for(j in 3:65)
+{
+  X_test[,j] = pmax(x_test-(j-2),0)
+}
+
+X_test[,66] = x_test_2
+for(j in 67:kmax)
+{
+  X_test[,j] = pmax(x_test_2-(j-66),0)
+}
+
+y_pred = X_test %*% pm
+error <- sum((y_pred - y_test)^2) / n_test
+error
+```
+
+
+
+
+
+
+

@@ -1,0 +1,74 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+raw_data = read.csv('frisbee.csv')
+frisbee.ts = ts(raw_data$frisbee, start = c(2004, 1), end = c(2022, 8), frequency = 12)
+plot(frisbee.ts, ylab = "Pupularity Index", xlab = "Time (in months)", main = "Frisbee Google Trend")
+```
+```{r}
+t = 1: length(frisbee.ts)
+f = 1
+d = 12
+v1 = cos(2*pi*f*t/d)
+v2 = sin(2*pi*f*t/d)
+lin.mod = lm(frisbee.ts ~ 1 + t + v1 + v2)
+plot(t, frisbee.ts, type = "l", xlab = "Time", ylab = "Pupularity Index", main = "Frisbee Google Trend")
+points(t, lin.mod$fitted, type = "l", col = "red")
+summary(lin.mod)
+
+
+```
+```{r}
+stderrs = c(0.941474, 0.007256, 0.663513, 0.663513)
+bhat = lin.mod$coefficients
+n = length(frisbee.ts)
+
+j = 1
+vals = c(bhat[j] - stderrs[j]*seq(5, 0, length = 100), bhat[j], bhat[j] + stderrs[j]*seq(0, 5, length = 100))
+plot(vals, (1/stderrs[j])*(dt((vals - bhat[j])/(stderrs[j]), df = n-4)), type = "l", xlab = "x", ylab = "density values", main = "Standard t-density")
+abline(v = bhat[j])
+points(vals, dnorm(vals, mean = bhat[j], sd = stderrs[j]), col = "red", type = "l")
+```
+
+```{r}
+j = 2
+vals = c(bhat[j] - stderrs[j]*seq(5, 0, length = 100), bhat[j], bhat[j] + stderrs[j]*seq(0, 5, length = 100))
+plot(vals, (1/stderrs[j])*(dt((vals - bhat[j])/(stderrs[j]), df = n-4)), type = "l", xlab = "x", ylab = "density values", main = "Standard t-density")
+abline(v = bhat[j])
+points(vals, dnorm(vals, mean = bhat[j], sd = stderrs[j]), col = "red", type = "l")
+```
+
+```{r}
+j = 3
+vals = c(bhat[j] - stderrs[j]*seq(5, 0, length = 100), bhat[j], bhat[j] + stderrs[j]*seq(0, 5, length = 100))
+plot(vals, (1/stderrs[j])*(dt((vals - bhat[j])/(stderrs[j]), df = n-4)), type = "l", xlab = "x", ylab = "density values", main = "Standard t-density")
+abline(v = bhat[j])
+points(vals, dnorm(vals, mean = bhat[j], sd = stderrs[j]), col = "red", type = "l")
+```
+
+```{r}
+j = 4
+vals = c(bhat[j] - stderrs[j]*seq(5, 0, length = 100), bhat[j], bhat[j] + stderrs[j]*seq(0, 5, length = 100))
+plot(vals, (1/stderrs[j])*(dt((vals - bhat[j])/(stderrs[j]), df = n-4)), type = "l", xlab = "x", ylab = "density values", main = "Standard t-density")
+abline(v = bhat[j])
+points(vals, dnorm(vals, mean = bhat[j], sd = stderrs[j]), col = "red", type = "l")
+```
+```{r}
+df <- n-4
+#Estimate of sigma:
+sighat = sqrt((sum((lin.mod$residuals)^2))/(n-4)) #this is also denoted by the Residual Standard Error
+X = model.matrix(lin.mod)
+Sigma.mat = (sighat^2)*solve(t(X) %*% X)
+Sigma.mat
+```
+```{r}
+residual <- lin.mod$residuals
+plot(t, residual)
+
+acf(residual, lag.max = 50, type = "correlation", plot = T, main = "Correlogram for the data")
+```
+
+

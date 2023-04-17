@@ -1,0 +1,161 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+data(lynx)
+plot(data, main='Annual Canadian Lynx trappings', ylab='Annual numbers of lynx trappings')
+length(data)
+time = 1: (length(data))
+time
+```
+
+```{r}
+dt <- data[1:90]
+p = 2
+n = length(dt)
+yt = dt[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, dt[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+X <- Xmat
+sigma_hat <- sqrt((sum((model$residuals)^2))/(n-2*p-1))
+solve(t(X) %*% X) * (sigma_hat^2)
+```
+```{r}
+#define population mean and standard deviation
+population_mean <- 697.54824    
+population_sd <- 18706.797539^0.5
+alpha <- 0.05
+object <- 'phi_2'
+
+#define upper and lower bound
+lower_bound <- population_mean - population_sd
+upper_bound <- population_mean + population_sd
+
+#Create a sequence of 1000 x values based on population mean and standard deviation
+x <- seq(-4, 4, length = 1000) * population_sd + population_mean
+
+#create a vector of values that shows the height of the probability distribution
+#for each value in x
+y <- dnorm(x, population_mean, population_sd)
+
+#plot normal distribution with customized x-axis labels
+plot(x,y, type = "l", lwd = 2, axes = FALSE, xlab = object, ylab = 'Probability density', main = 'Distribution of phi_2')
+
+# Use quantile function to compute the confidence interval (CI)
+lo <- qnorm(alpha/2,   mean=population_mean, sd=population_sd)  # lower CI bound
+hi <- qnorm(1-alpha/2, mean=population_mean, sd=population_sd)  # upper CI bound
+
+sd_axis_bounds = 5
+axis_bounds <- seq(-sd_axis_bounds * population_sd + population_mean,
+                    sd_axis_bounds * population_sd + population_mean,
+                    by = population_sd)
+axis(side = 1, at = axis_bounds, pos = 0)
+
+xci <- seq(lo, hi, len=100)             # background: confidence interval
+yci <- dnorm(xci, mean=population_mean, sd=population_sd)
+xx <- c(xci, rev(xci))
+yy <- c(0*yci, rev(yci))
+polygon(xx,yy,col=gray(0.9), border=NA)
+
+# mean
+lines(c(population_mean,population_mean), c(0,dnorm(population_mean,mean=population_mean,sd=population_sd)), lty="dashed", lwd=0.5) 
+print(lo)
+print(hi)
+```
+
+```{r}
+samples <- data.frame(X=rchisq(1:100000, df=85))
+S_beta_hat <- sqrt((sum((model$residuals)^2)))
+sigma_samples <- (S_beta_hat / samples)^0.5
+hist(unlist(sigma_samples), breaks = 100, main = 'histogram of sigma', xlab='sigma')
+quantile(unlist(sigma_samples), probs=c(0.025,0.975))
+```
+
+```{r}
+(S_beta_hat/85)^0.5
+```
+```{r}
+#Predictions with the AR(p) model:
+k = 24 #k predictions into the future
+p = 2
+n = 90
+yhat = c(data[1:90], rep(-9999, k))
+for(i in 1:k)
+{
+    ans = model$coefficients[1]
+    for(j in 1:p)
+    {
+       ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+```
+```{r}
+# Prediction by recurrent relation
+plot(time, data, main='Prediction by recurrent relation', ylab='Annual numbers of lynx trappings', type= 'l')
+points(time, yhat, type = "l", col = "red")
+abline(v=90, lty=2)
+```
+```{r}
+# the closed form prediction formula
+tme = 91:114
+y = 1.97 * (10^12) * 1.27^(-tme) * cos(0.743*tme - 0.237) + 1516.413
+plot(time, data, main='Prediction by closed-form formula', ylab='Annual numbers of lynx trappings', type= 'l')
+abline(v=90, lty=2)
+points(tme, y, col = "blue", type = 'l')
+```
+```{r}
+# Uncertainty interval
+k = 24
+n <- 90
+p <- 2
+resdf = n - 2*p - 1
+sighat = sqrt((sum((model$residuals)^2))/resdf) #this is also denoted by the Residual Standard Error
+Gamhat = matrix(sighat^2, 1, 1) #this is the uncertainty for the first i.e., (n+1)^th prediction
+#The following vector vkp is the vector a from the lecture notes
+vkp = matrix(model$coefficients[2], 1, 1) #this is the estimate for phi1
+for(i in 1:(k-1))
+{
+    covterm = Gamhat %*% vkp
+    varterm = (sighat^2) + (t(vkp) %*% (Gamhat %*% vkp))
+    Gamhat = cbind(Gamhat, covterm)
+    Gamhat = rbind(Gamhat, c(t(covterm), varterm))
+    if (i < p) {vkp = c(model$coefficients[(i+2)], vkp)}
+    if (i >= p) {vkp = c(0, vkp)}
+}
+Gamhat
+predsd = sqrt(diag(Gamhat))
+#Plotting predictions with uncertainty bands (+/- 2 standard deviation bounds):
+predlower = predvalues - 2*predsd
+predupper = predvalues + 2*predsd
+
+yhatlower = c(dt, predlower)
+yhatupper = c(dt, predupper)
+
+plot(c((1:(n+k)), (1:(n+k)), (1:(n+k))), c(yhat, yhatlower, yhatupper), type = "n", xlab = "Time", ylab = "Data")
+points((1:(n+k)), yhat, type = "l")
+points(1:n, dt, type = "l")
+points((n+1):(n+k), predvalues, type = "l", col = "blue")
+points((n+1):(n+k), predlower, type = "l", col = "red")
+points((n+1):(n+k), predupper, type = "l", col = "red")
+abline(v = n+1)
+```
+```{r}
+predsda
+```
+
+
+

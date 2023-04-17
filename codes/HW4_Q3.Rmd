@@ -1,0 +1,109 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+uspop.raw = read.csv("POPTHM.csv")
+dt = uspop.raw$POPTHM
+plot(uspop.raw$POPTHM, type = "l", xlab = 'time', ylab = 'Population')
+n <- length(dt)
+time <- 1:n
+```
+
+```{r}
+# AR(3) model
+p = 3
+n = length(dt)
+yt = dt[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, dt[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+S_beta_hat <- sqrt((sum((model$residuals)^2)))
+(S_beta_hat/(n - 2*p - 1))^0.5
+```
+```{r}
+#Predictions with the AR(p) model:
+k = 60 #k predictions into the future
+p = 3
+yhat = c(dt[1:n], rep(-9999, k))
+for(i in 1:k)
+{
+    ans = model$coefficients[1]
+    for(j in 1:p)
+    {
+       ans = ans + (model$coefficients[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+```
+```{r}
+plot(time, dt, main='Prediction using AR(3)', ylab='US Population', type= 'l')
+time_predict <- 763:(763+59)
+points(time_predict, predvalues, type = "l", col = "red")
+abline(v=762, lty=2)
+```
+
+
+
+```{r}
+dt_shift_0 <- dt[1:(n-2)]
+dt_shift_1 <- dt[2:(n-1)]
+dt_shift_2 <- dt[3:n]
+D <- dt_shift_2 - 2*dt_shift_1 + dt_shift_0
+length(D)
+```
+```{r}
+# fit AR(1) to D
+p = 1
+n = length(D)
+yt = D[(p+1):n]
+Xmat = matrix(1, (n-p), 1)
+
+for(j in 1:p)
+{
+   Xmat = cbind(Xmat, D[(p-j+1):(n-j)])
+}
+
+model = lm(yt ~ -1 + Xmat)
+summary(model)
+```
+```{r}
+Xmat
+```
+
+
+```{r}
+#Predictions with the AR(p) model:
+k = 60 #k predictions into the future
+p = 3
+yhat = c(dt[1:n], rep(-9999, k))
+list <- c(-0.0886, 2.39, -1.78, 0.39)
+for(i in 1:k)
+{
+    ans = list[1]
+    for(j in 1:p)
+    {
+       ans = ans + (list[(j+1)])*yhat[n+i-j]
+    }
+    yhat[(n+i)] = ans
+}
+predvalues = yhat[-(1:n)]
+predvalues
+```
+```{r}
+plot(time, dt, main='Prediction by twice difference model', ylab='US Population', type= 'l')
+time_predict <- 763:(763+59)
+points(time_predict, predvalues, type = "l", col = "red")
+abline(v=762, lty=2)
+```
+

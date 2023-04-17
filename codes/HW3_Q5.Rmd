@@ -1,0 +1,138 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+raw_data = read.csv('q5data.csv')
+date = raw_data$date
+data = raw_data$data
+t = 1: length(date)
+plot(t, data, ylab = "Retail Sales (millions of dollar)", xlab = "Time (in months)", main = "Retail Sales", type = 'l')
+```
+```{r}
+n = length(date)
+tme = 1:n
+dt = data
+D = 5
+Xfull = matrix(1, n, 1)
+scaledtme = (1:n)/n
+for(i in 1:D)
+{
+   Xfull = cbind(Xfull, scaledtme^i)
+}
+totfreq = 5
+d = 12
+for(k in 1:totfreq)
+{
+   Xfull = cbind(Xfull, cos(2*pi*(k/d)*tme), sin(2*pi*(k/d)*tme))
+}
+```
+
+```{r}
+logEvid = rep(-1, 36)
+AIC = rep(-1, 36)
+BIC = rep(-1, 36)
+choice1 = rep(-1, 36)
+choice2 = rep(-1, 36)
+i = 0
+for(k in 0:5)
+{
+    for (j in 0:5){
+      i = i+1
+      X_1 = Xfull[,1:(k+1)]
+      if (j == 0){
+        Xmat = X_1
+      }
+      else {
+        X_2 = Xfull[,7:(6+2*j)]
+        Xmat = cbind(X_1, X_2)
+      }
+      if (i == 1) {
+        p = 1
+      }
+      else {
+        p = ncol(Xmat)
+      }
+      md = lm(dt ~ -1 + Xmat)
+      logEvid[i] = (lgamma(p/2)) - ((p/2)*(log((sum(md$fitted.values^2))))) + (lgamma((n-p-1)/2)) - (((n-p)/2)*(log((sum(md$residuals^2))/2)))
+      AIC[i] = n + n*log((2*pi/n)*sum(md$residuals^2)) + 2*(p+1)
+      BIC[i] = n + n*log((2*pi/n)*sum(md$residuals^2)) + (log(n))*(p+1)
+      choice1[i] = k
+      choice2[i] = j
+    }
+}
+```
+
+```{r}
+# the trial order
+cbind(choice1, choice2)
+```
+```{r}
+# evidence
+logEvid.scaled = logEvid - max(logEvid) #scaling so I can take exponential
+Evid = exp(logEvid.scaled)
+Evid = Evid/(sum(Evid))
+print(Evid[which.max((Evid))])
+plot(Evid, type = "h")
+
+index = 30
+X_1 = Xfull[,1:(k+1)]
+k =  choice1[index]
+j =  choice2[index]
+
+if (j == 0) {
+  Xmat = X_1
+} else {
+  X_2 = Xfull[,7:(6+2*j)]
+  Xmat = cbind(X_1, X_2)
+}
+
+if (i == 1) {
+  p = 1
+} else {
+  p = ncol(Xmat)
+}
+
+md = lm(dt ~ -1 + Xmat)
+plot(t, data, ylab = "Retail Sales (millions of dollar)", xlab = "Time (in months)", main = "Best Fitted Value by evidence (k=4. j=5)", type = 'l')
+points(t, md$fitted.values, type = 'l', col ='red')
+```
+
+```{r}
+k = choice1
+j = choice2
+cbind(k, j, Evid)
+```
+
+
+
+```{r}
+# AIC
+index = which.min(AIC)
+print(index)
+X_1 = Xfull[,1:(k+1)]
+k =  choice1[index]
+j =  choice2[index]
+
+if (j == 0) {
+  Xmat = X_1
+} else {
+  X_2 = Xfull[,7:(6+2*j)]
+  Xmat = cbind(X_1, X_2)
+}
+
+if (i == 1) {
+  p = 1
+} else {
+  p = ncol(Xmat)
+}
+
+md = lm(dt ~ -1 + Xmat)
+plot(t, data, ylab = "Retail Sales (millions of dollar)", xlab = "Time (in months)", main = "Best Fitted Value by evidence (k=5. j=5)", type = 'l')
+points(t, md$fitted.values, type = 'l', col ='red')
+```
+
+```{r}
+# BIC
+which.min(BIC)
+```

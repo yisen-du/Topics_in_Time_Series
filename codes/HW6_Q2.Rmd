@@ -1,0 +1,111 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r}
+word <- 'beer'
+raw_data = read.csv("beer.csv")
+len <- length(raw_data[,1])
+dt <- as.numeric(raw_data[2:len,1])
+plot(dt, type = "l", ylab = "index", xlab = 'time', main = word)
+n = length(dt)
+```
+```{r}
+data_train <- dt[1:(n-36)]
+data_test <- dt[(n-35):n]
+plot(data_train, type = "l", ylab = "index", xlab = 'time', main = sprintf('%s (train)', word))
+```
+```{r}
+par(mfrow = c(2, 1))
+par(mar = c(4,4,4,4))
+acf(data_train, lag.max = 60, type = "correlation", plot = T, main = "Sample Autocorrelation")
+pacf(data_train, lag.max = 60, plot = T, main = "Sample Partial Autocorrelation")
+par(mfrow = c(1, 1))
+```
+```{r}
+# Differencing twice:
+dt12 = diff(data_train, lag = 12)
+dtnew = diff(dt12) #this is the transformed data
+
+par(mfrow = c(2, 1))
+par(mar = c(4,4,3,3))
+acf(dtnew, lag.max = 60, type = "correlation", plot = T, main = "Sample Autocorrelation")
+pacf(dtnew, lag.max = 60, plot = T, main = "Sample Partial Autocorrelation")
+par(mfrow = c(1, 1))
+
+plot(dtnew, type = "l", ylab = "index", xlab = 'time', main = sprintf('%s (train, tranformed)', word))
+```
+```{r}
+pmax = 5
+qmax = 5
+aicmat = matrix(-999, (1+pmax), (1+qmax))
+bicmat = matrix(-999, (1+pmax), (1+qmax))
+for(i in 0:pmax)
+{
+    for(j in 0:qmax)
+    {
+        md = arima(dtnew, order = c(i, 0, j))
+        aicmat[(i+1), (j+1)] = ((-2)*md$loglik)+2*(i+j+2)
+        bicmat[(i+1), (j+1)] = ((-2)*md$loglik)+(log(length(dtnew)))*(i+j+2)
+    }
+}
+
+#Best ARMA model:
+aicmat
+which(aicmat == min(aicmat), arr.ind = T)
+bicmat
+which(bicmat == min(bicmat), arr.ind = T)
+```
+```{r}
+armaorig = arima(dt, order = c(3, 1, 5), seasonal = list(order = c(0, 1, 0), period = 12))
+L = 36
+
+armaorig
+
+preds = predict(armaorig, n.ahead = L)
+plot(c(dt, preds$pred), type = "l", xlab = "Time", ylab = "Data", main = 'ARMA(3,5)')
+points((n+1):(n+L), data_test, type = "l")
+points((n+1):(n+L), preds$pred, type = "l", col = "blue")
+```
+```{r}
+armaorig = arima(dt, order = c(3, 1, 3), seasonal = list(order = c(0, 1, 0), period = 12))
+L = 36
+
+armaorig
+
+preds = predict(armaorig, n.ahead = L)
+plot(c(dt, preds$pred), type = "l", xlab = "Time", ylab = "Data", main = 'ARMA(3,3)')
+points((n+1):(n+L), data_test, type = "l")
+points((n+1):(n+L), preds$pred, type = "l", col = "blue")
+```
+```{r}
+armaorig = arima(dt, order = c(3, 1, 5), seasonal = list(order = c(1, 1, 1), period = 12))
+L = 36
+
+armaorig
+
+preds = predict(armaorig, n.ahead = L)
+plot(c(dt, preds$pred), type = "l", xlab = "Time", ylab = "Data", main = 'ARMA(3,5) X (1,1)_12')
+points((n+1):(n+L), data_test, type = "l")
+points((n+1):(n+L), preds$pred, type = "l", col = "blue")
+```
+```{r}
+armaorig = arima(dt, order = c(3, 1, 5), seasonal = list(order = c(2, 1, 1), period = 12))
+L = 36
+
+armaorig
+
+preds = predict(armaorig, n.ahead = L)
+plot(c(dt, preds$pred), type = "l", xlab = "Time", ylab = "Data", main = 'ARMA(3,5) X (2,1)_12')
+points((n+1):(n+L), data_test, type = "l")
+points((n+1):(n+L), preds$pred, type = "l", col = "blue")
+```
+
+
+
+
+
+

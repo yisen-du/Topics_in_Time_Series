@@ -1,0 +1,89 @@
+
+
+```{r}
+#Sunspots Data:
+sunspots.data = read.delim("SN_y_tot_V2.0_25Aug2022.txt", header = F, sep = "")
+head(sunspots.data)
+sunspots = sunspots.data[,1:2]
+plot(sunspots[,1], sunspots[,2], xlab = "Year (1700 to 2021)", ylab = "Yearly Sunspot Numbers", type = "l", main = "Sunspot Data")
+
+dt = sunspots[,2]
+n = length(dt)
+p = 2
+yt = dt[(p+1):n]
+```
+```{r}
+L = 50
+par(mfrow = c(1, 2))
+acf(dt, lag.max = L, type = "correlation", plot = T, main = "Sample Autocorrelation")
+pacf(dt, lag.max = L,  plot = T, main = "Sample Partial Autocorrelation") 
+
+```
+
+```{r}
+num_test <- 40
+dt_train <- sunspots[,2][1:(n-num_test)]
+dt_test <- sunspots[,2][(n-num_test+1):n]
+time <- 1:(n-num_test)
+time_predict <- (n-num_test+1):n
+
+list_1 <- (rep(-999, 15))
+
+par(mfrow = c(5, 3))
+par(mar = c(1,1,1,1))
+for (p in (1:15)) {
+  # fit the model
+  model = arima(dt_train, order = c(0, 0, p), method = "CSS")
+  predvalues = (predict(model, n.ahead = num_test))$pred
+  
+  plot((1:n), dt, type= 'l',xlab='',xaxt='n', ylab="",yaxt="n", main=sprintf('Prediction of MA(%s)', p))
+  
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=(n-num_test), lty=2)
+  
+  list_1[p] <- sum((dt_test - predvalues)^2)
+}
+par(mfrow = c(1, 1))
+```
+```{r}
+plot((1:15), (list_1), xlab = 'p', ylab = 'l-2 lost', main = 'Accuracy of different MA models')
+```
+
+
+```{r}
+par(mfrow = c(5, 3))
+par(mar = c(1,1,1,1))
+list_1 <- (rep(-999, 15))
+for (p in (1:15)) {
+  # fit the model
+  model = arima(dt_train, order = c(p, 0, 0), method = "CSS")
+  predvalues = (predict(model, n.ahead = num_test))$pred
+  
+  plot((1:n), dt, type= 'l',xlab='',xaxt='n', ylab="",yaxt="n", main=sprintf('Prediction of AR(%s)', p))
+  
+  points(time_predict, predvalues, type = "l", col = "red", ylab="",yaxt="n")
+  abline(v=(n-num_test), lty=2)
+  list_1[p] <- sum((dt_test - predvalues)^2)
+}
+par(mfrow = c(1, 1))
+```
+```{r}
+plot((1:15), (list_1), xlab = 'p', ylab = 'l-2 lost', main = 'Accuracy of different AR models')
+```
+```{r}
+list_1
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
